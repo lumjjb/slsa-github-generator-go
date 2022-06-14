@@ -137,18 +137,23 @@ func GenerateProvenance(name, digest, command, envs string) ([]byte, string, err
 		return nil, "", err
 	}
 
-	// Upload the signed attestation to recor.
-	logEntry, err := s.Upload(ctx, att)
-	if err != nil {
-		return nil, "", err
-	}
+	/*
 
-	if logEntry.LogIndex == nil || logEntry.LogID == nil {
-		return nil, "", fmt.Errorf("logEntry fields not present for tlog upload")
-	}
-	logRef := fmt.Sprintf("index:%d, logID:%s", *logEntry.LogIndex, *logEntry.LogID)
+		// Upload the signed attestation to recor.
+		logEntry, err := s.Upload(ctx, att)
+		if err != nil {
+			return nil, "", err
+		}
 
-	return att.Bytes(), logRef, nil
+		if logEntry.LogIndex == nil || logEntry.LogID == nil {
+			return nil, "", fmt.Errorf("logEntry fields not present for tlog upload")
+		}
+		logRef := fmt.Sprintf("index:%d, logID:%s", *logEntry.LogIndex, *logEntry.LogID)
+
+		return att.Bytes(), logRef, nil
+	*/
+
+	return att.Bytes(), "", nil
 }
 
 func unmarshallList(arg string) ([]string, error) {
