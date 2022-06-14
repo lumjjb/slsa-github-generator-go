@@ -106,7 +106,7 @@ func attestCmd() *cobra.Command {
 		sbomFile      string
 		sbomSha256    string
 		sbomUri       string
-		testField	  string
+		testField     string
 	)
 
 	c := &cobra.Command{
@@ -145,7 +145,7 @@ run in the context of a Github Actions workflow.`,
 				sboms, err := parseSbomInput(sbomFile, sbomUri, sbomSha256)
 				check(err)
 
-				p, err = CustomSbomStatement(parsedSubjects, predicateType, sboms)
+				p, err = CustomSbomStatement(parsedSubjects, predicateType, sboms, testField)
 			} else {
 				predicateBytes, err := os.ReadFile(predicateFile)
 				check(err)
@@ -164,7 +164,7 @@ run in the context of a Github Actions workflow.`,
 				check(err)
 
 				/*
-					
+
 					_, err = s.Upload(ctx, att)
 					check(err)
 				*/
@@ -193,7 +193,8 @@ run in the context of a Github Actions workflow.`,
 }
 
 type SBOMPredicate struct {
-	Sboms []SbomDocument `json:"sboms"`
+	Sboms []SbomDocument `json:"sboms"`,
+	TestField string `json:testField`
 }
 
 // CustomSbomStatement creates an intoto SBOM statement with provided fields
@@ -206,7 +207,7 @@ func CustomSbomStatement(subjects []intoto.Subject, predicateType string, docs [
 			Subject:       subjects,
 		},
 		Predicate: SBOMPredicate{
-			Sboms: docs,
+			Sboms:     docs,
 			TestField: extra,
 		},
 	}, nil
