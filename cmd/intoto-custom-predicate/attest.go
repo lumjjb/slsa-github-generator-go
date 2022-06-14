@@ -193,8 +193,8 @@ run in the context of a Github Actions workflow.`,
 }
 
 type SBOMPredicate struct {
-	Sboms []SbomDocument `json:"sboms"`,
-	TestField string `json:testField`
+	Sboms     []SbomDocument `json:"sboms"`
+	TestField string         `json:"testField"`
 }
 
 // CustomSbomStatement creates an intoto SBOM statement with provided fields
