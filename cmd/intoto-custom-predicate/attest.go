@@ -106,6 +106,7 @@ func attestCmd() *cobra.Command {
 		sbomFile      string
 		sbomSha256    string
 		sbomUri       string
+		testField	  string
 	)
 
 	c := &cobra.Command{
@@ -162,8 +163,11 @@ run in the context of a Github Actions workflow.`,
 				att, err := s.Sign(ctx, p)
 				check(err)
 
-				_, err = s.Upload(ctx, att)
-				check(err)
+				/*
+					
+					_, err = s.Upload(ctx, att)
+					check(err)
+				*/
 
 				f, err := getFile(attPath)
 				check(err)
@@ -183,6 +187,7 @@ run in the context of a Github Actions workflow.`,
 	c.Flags().StringVarP(&sbomFile, "sbom", "b", "", "Path to create SBOM predicate")
 	c.Flags().StringVarP(&sbomSha256, "sbomSha256", "d", "", "Sha256 hash the SBOM")
 	c.Flags().StringVarP(&sbomUri, "sbomUri", "u", "", "SBOM Uri if file not provided")
+	c.Flags().StringVarP(&testField, "testfield", "e", "", "test for dev")
 
 	return c
 }
@@ -193,7 +198,7 @@ type SBOMPredicate struct {
 
 // CustomSbomStatement creates an intoto SBOM statement with provided fields
 // Take in SBOM hash, URI,
-func CustomSbomStatement(subjects []intoto.Subject, predicateType string, docs []SbomDocument) (*intoto.Statement, error) {
+func CustomSbomStatement(subjects []intoto.Subject, predicateType string, docs []SbomDocument, extra string) (*intoto.Statement, error) {
 	return &intoto.Statement{
 		StatementHeader: intoto.StatementHeader{
 			Type:          intoto.StatementInTotoV01,
@@ -202,6 +207,7 @@ func CustomSbomStatement(subjects []intoto.Subject, predicateType string, docs [
 		},
 		Predicate: SBOMPredicate{
 			Sboms: docs,
+			TestField: extra,
 		},
 	}, nil
 }
