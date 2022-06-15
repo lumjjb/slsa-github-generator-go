@@ -106,7 +106,8 @@ func attestCmd() *cobra.Command {
 		sbomFile      string
 		sbomSha256    string
 		sbomUri       string
-		testField     string
+		repoName      string
+		commit        string
 	)
 
 	c := &cobra.Command{
@@ -145,7 +146,7 @@ run in the context of a Github Actions workflow.`,
 				sboms, err := parseSbomInput(sbomFile, sbomUri, sbomSha256)
 				check(err)
 
-				p, err = CustomSbomStatement(parsedSubjects, predicateType, sboms, testField)
+				p, err = CustomSbomStatement(parsedSubjects, predicateType, sboms, repoName, commit)
 			} else {
 				predicateBytes, err := os.ReadFile(predicateFile)
 				check(err)
@@ -179,27 +180,29 @@ run in the context of a Github Actions workflow.`,
 		},
 	}
 
-	c.Flags().StringVarP(&attPath, "signature", "g", "attestation.intoto.jsonl", "Path to write the signed attestation.")
-	c.Flags().StringVarP(&subjects, "subjects", "s", "", "Formatted list of subjects in the same format as sha256sum.")
-	c.Flags().StringVarP(&predicateType, "predicateType", "t", "", "Predicate type for intoto statement header.")
+	c.Flags().StringVarP(&attPath, "signature", "g", "attestation.intoto.jsonl", "Path to write the signed attestation")
+	c.Flags().StringVarP(&subjects, "subjects", "s", "", "Formatted list of subjects in the same format as sha256sum")
+	c.Flags().StringVarP(&predicateType, "predicateType", "t", "", "Predicate type for intoto statement header")
 	c.Flags().StringVarP(&predicateFile, "predicateFile", "f", "predicate.json", "Path to retrieve custom predicate to create attestation from")
 	// Pass in SBOM file OR the sha256 and the sbomURI
 	c.Flags().StringVarP(&sbomFile, "sbom", "b", "", "Path to create SBOM predicate")
 	c.Flags().StringVarP(&sbomSha256, "sbomSha256", "d", "", "Sha256 hash the SBOM")
 	c.Flags().StringVarP(&sbomUri, "sbomUri", "u", "", "SBOM Uri if file not provided")
-	c.Flags().StringVarP(&testField, "testfield", "e", "", "test for dev")
+	c.Flags().StringVarP(&repoName, "repository", "r", "", "Github repository for which the attestation was generated")
+	c.Flags().StringVarP(&commit, "commit", "c", "", "Commit of repo at which the attestation was generated")
 
 	return c
 }
 
 type SBOMPredicate struct {
-	Sboms     []SbomDocument `json:"sboms"`
-	TestField string         `json:"testField"`
+	Sboms      []SbomDocument `json:"sboms"`
+	Repository string         `json:"repository of which sbom was generated"`
+	Commit     string         `json:"commit of repoName at which sbom was generated"`
 }
 
 // CustomSbomStatement creates an intoto SBOM statement with provided fields
 // Take in SBOM hash, URI,
-func CustomSbomStatement(subjects []intoto.Subject, predicateType string, docs []SbomDocument, extra string) (*intoto.Statement, error) {
+func CustomSbomStatement(subjects []intoto.Subject, predicateType string, docs []SbomDocument, repo string, commit string) (*intoto.Statement, error) {
 	return &intoto.Statement{
 		StatementHeader: intoto.StatementHeader{
 			Type:          intoto.StatementInTotoV01,
@@ -207,8 +210,9 @@ func CustomSbomStatement(subjects []intoto.Subject, predicateType string, docs [
 			Subject:       subjects,
 		},
 		Predicate: SBOMPredicate{
-			Sboms:     docs,
-			TestField: extra,
+			Sboms:      docs,
+			Repository: repo,
+			Commit:     commit,
 		},
 	}, nil
 }
