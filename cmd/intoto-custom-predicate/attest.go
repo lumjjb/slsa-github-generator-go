@@ -99,15 +99,17 @@ func getFile(path string) (io.Writer, error) {
 // attestCmd returns the 'attest' command.
 func attestCmd() *cobra.Command {
 	var (
-		attPath       string
-		subjects      string
-		predicateFile string
-		predicateType string
-		sbomFile      string
-		sbomSha256    string
-		sbomUri       string
-		repoName      string
-		commit        string
+		attPath                  string
+		subjects                 string
+		predicateFile            string
+		predicateType            string
+		sbomFile                 string
+		sbomSha256               string
+		sbomUri                  string
+		artifactRepo             string
+		artifactRepoCommit       string
+		attestationGenRepo       string
+		attestationGenRepoCommit string
 	)
 
 	c := &cobra.Command{
@@ -146,7 +148,10 @@ run in the context of a Github Actions workflow.`,
 				sboms, err := parseSbomInput(sbomFile, sbomUri, sbomSha256)
 				check(err)
 
-				p, err = CustomSbomStatement(parsedSubjects, predicateType, sboms, repoName, commit)
+				prov, err := createSbomProv(artifactRepo, artifactRepoCommit, attestationGenRepo, attestationGenRepoCommit)
+				check(err)
+
+				p, err = CustomSbomStatement(parsedSubjects, predicateType, sboms, prov)
 			} else {
 				predicateBytes, err := os.ReadFile(predicateFile)
 				check(err)
@@ -185,21 +190,29 @@ run in the context of a Github Actions workflow.`,
 	c.Flags().StringVarP(&sbomFile, "sbom", "b", "", "Path to create SBOM predicate")
 	c.Flags().StringVarP(&sbomSha256, "sbomSha256", "d", "", "Sha256 hash the SBOM")
 	c.Flags().StringVarP(&sbomUri, "sbomUri", "u", "", "SBOM Uri if file not provided")
-	c.Flags().StringVarP(&repoName, "repository", "r", "", "Github repository for which the attestation was generated")
-	c.Flags().StringVarP(&commit, "commit", "c", "", "Commit of repo at which the attestation was generated")
+	c.Flags().StringVarP(&artifactRepo, "art-repo", "a", "", "Github repository from which the artifact was built")
+	c.Flags().StringVarP(&artifactRepoCommit, "art-repo-commit", "c", "", "Commit of repository from which the artifact was built")
+	c.Flags().StringVarP(&attestationGenRepo, "att-generation-repo", "x", "", "Github repository used to generate the attestation")
+	c.Flags().StringVarP(&attestationGenRepoCommit, "att-generation-repo-commit", "y", "", "Commit of Github repository used to generate the attestation")
 
 	return c
 }
 
 type SBOMPredicate struct {
 	Sboms      []SbomDocument `json:"sboms"`
-	Repository string         `json:"repository of which sbom was generated"`
-	Commit     string         `json:"commit of repoName at which sbom was generated"`
+	Provenance SbomProvenance `json:"provenance"`
+}
+
+type SbomProvenance struct {
+	ArtifactSourceRepo       string `json:"artifact-source-repo"`
+	ArtifactSourceRepoCommit string `json:"artifact-source-repo-commit"`
+	AttestationGenRepo       string `json:"attestation-generator-repo"`
+	AttestationGenRepoCommit string `json:"attestation-generator-repo-commit"`
 }
 
 // CustomSbomStatement creates an intoto SBOM statement with provided fields
 // Take in SBOM hash, URI,
-func CustomSbomStatement(subjects []intoto.Subject, predicateType string, docs []SbomDocument, repo string, commit string) (*intoto.Statement, error) {
+func CustomSbomStatement(subjects []intoto.Subject, predicateType string, docs []SbomDocument, prov SbomProvenance) (*intoto.Statement, error) {
 	return &intoto.Statement{
 		StatementHeader: intoto.StatementHeader{
 			Type:          intoto.StatementInTotoV01,
@@ -208,8 +221,7 @@ func CustomSbomStatement(subjects []intoto.Subject, predicateType string, docs [
 		},
 		Predicate: SBOMPredicate{
 			Sboms:      docs,
-			Repository: repo,
-			Commit:     commit,
+			Provenance: prov,
 		},
 	}, nil
 }
@@ -224,6 +236,15 @@ func CustomIntotoStatement(subjects []intoto.Subject, predicateType string, pred
 			Subject:       subjects,
 		},
 		Predicate: predicate,
+	}, nil
+}
+
+func createSbomProv(artifactRepo string, artifactRepoCommit string, attestationGenRepo string, attestationGenRepoCommit string) (SbomProvenance, error) {
+	return SbomProvenance{
+		ArtifactSourceRepo:       artifactRepo,
+		ArtifactSourceRepoCommit: artifactRepoCommit,
+		AttestationGenRepo:       attestationGenRepo,
+		AttestationGenRepoCommit: attestationGenRepoCommit,
 	}, nil
 }
 
