@@ -511,7 +511,7 @@ jobs:
       contents: write
       id-token: write # Needed for keyless.
     runs-on: ubuntu-latest
-    needs: [build,build-dry,provenance,builder]
+    needs: [build,build-dry,provenance,builder,detect-env]
     if: inputs.upload-assets == true
     steps:
       # Verify binary hash.
@@ -600,6 +600,8 @@ jobs:
           BUILDER_BINARY: "${{ env.BUILDER_CUSTOM_PRED_BINARY }}"
           GITHUB_CONTEXT: "${{ toJSON(github) }}"
           SBOM_HASH: "${{ needs.build.outputs.sbom-sha256 }}"
+          WORKFLOW_REPO: "${{ needs.detect-env.outputs.builder_repo }}"
+          WORKFLOW_REF: "${{ needs.detect-env.outputs.builder_ref }}"
         run: |
           set -euo pipefail
 
@@ -610,7 +612,8 @@ jobs:
           echo "${GITHUB_REF#refs/tags/}"
           # https://github.com/lumjjb/sample-golang-prov/releases/download/v0/binary.spdx
 
-          echo "github.workflow: ${{ github.workflow }}"
+          echo "builder_repo: $WORKFLOW_REPO"
+          echo "builder_ref: $WORKFLOW_REF"
 
           # Create and sign provenance
           # This sets signed-provenance-name to the name of the signed DSSE envelope.
