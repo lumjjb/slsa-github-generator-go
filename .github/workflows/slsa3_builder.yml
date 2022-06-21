@@ -612,10 +612,7 @@ jobs:
           echo "${GITHUB_REF#refs/tags/}"
           # https://github.com/lumjjb/sample-golang-prov/releases/download/v0/binary.spdx
 
-          echo "builder_repo: $WORKFLOW_REPO"
-          echo "builder_ref: $WORKFLOW_REF"
-
           # Create and sign provenance
           # This sets signed-provenance-name to the name of the signed DSSE envelope.
-          ./"$BUILDER_BINARY" attest -a "${{ github.server_url }}/${{ github.repository }}" -c "${{ github.sha }}" -x " " -y " " -t "http://lumjjb/sbom-documents" -s "$UNTRUSTED_BINARY_HASH $UNTRUSTED_BINARY_NAME" -u "${{ github.server_url }}/${{ github.repository }}/releases/download/${GITHUB_REF#refs/tags/}/${{ env.GENERATED_SPDX_NAME }}" -d "$SBOM_HASH"
+          ./"$BUILDER_BINARY" attest -a "${{ github.server_url }}/${{ github.repository }}" -c "${{ github.sha }}" -x "$WORKFLOW_REPO" -y "WORKFLOW_REF" -t "http://lumjjb/sbom-documents" -s "$UNTRUSTED_BINARY_HASH $UNTRUSTED_BINARY_NAME" -u "${{ github.server_url }}/${{ github.repository }}/releases/download/${GITHUB_REF#refs/tags/}/${{ env.GENERATED_SPDX_NAME }}" -d "$SBOM_HASH"
           
