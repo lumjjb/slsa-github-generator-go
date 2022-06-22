@@ -1,0 +1,1 @@
+./att-gen-binary2 attest -a "test/marco" -c "not from github" -x "not from workflow" -y "not from workflow" -t "http://lumjjb/sbom-documents" -s "91d041f50e34f0ee9a24b993af2b50bf46592b72f1c78f0822ee61e4ff98621f binary-name" -u "artifact download uri" -d "sbom hash"
