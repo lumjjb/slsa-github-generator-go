@@ -30,7 +30,7 @@ import (
 	slsav02 "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/v0.2"
 	"github.com/spf13/cobra"
 
-	"github.com/slsa-framework/slsa-github-generator/github"
+	"github.com/slsa-framework/slsa-github-generator-go/pkg/signing"
 	"github.com/slsa-framework/slsa-github-generator/signing/sigstore"
 )
 
@@ -134,8 +134,11 @@ run in the context of a Github Actions workflow.`,
 
 			ctx := context.Background()
 
-			_, err = github.NewOIDCClient()
-			check(err)
+			// comment out because fails if running locally
+			/*
+				_, err = github.NewOIDCClient()
+				check(err)
+			*/
 
 			/*
 				audience := regexp.MustCompile(`^(https?://)?github\.com/?`).ReplaceAllString("https://github.com/slsa-framework/slsa-github-generator@v1", "")
@@ -165,11 +168,13 @@ run in the context of a Github Actions workflow.`,
 			check(err)
 
 			if attPath != "" {
-				s := sigstore.NewDefaultSigner()
+				s := signing.NewDefaultFulcio()
 				att, err := s.Sign(ctx, p)
 				check(err)
 
-				_, err = s.Upload(ctx, att)
+				r := sigstore.NewDefaultRekor()
+
+				_, err = r.Upload(ctx, att)
 				check(err)
 
 				f, err := getFile(attPath)
