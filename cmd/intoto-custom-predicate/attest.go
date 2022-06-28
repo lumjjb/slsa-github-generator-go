@@ -31,6 +31,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/slsa-framework/slsa-github-generator-go/pkg/signing"
+	"github.com/slsa-framework/slsa-github-generator/github"
 	"github.com/slsa-framework/slsa-github-generator/signing/sigstore"
 )
 
@@ -110,14 +111,15 @@ func attestCmd() *cobra.Command {
 		artifactRepoCommit       string
 		attestationGenRepo       string
 		attestationGenRepoCommit string
+		local                    bool
 	)
 
 	c := &cobra.Command{
 		Use:   "attest",
-		Short: "Create a signed SLSA attestation from a Github Action",
-		Long: `Generate and sign SLSA provenance from a Github Action to form an attestation
-and upload to a Rekor transparency log. This command assumes that it is being
-run in the context of a Github Actions workflow.`,
+		Short: "Create and upload a signed SLSA attestation",
+		Long: `Generate and sign SLSA provenance to form an attestation and upload to a 
+Rekor transparency log. This command assumes that it is being run in 
+the context of a Github Actions workflow unless the --local flag is provided.`,
 
 		Run: func(cmd *cobra.Command, args []string) {
 			/*
@@ -133,12 +135,6 @@ run in the context of a Github Actions workflow.`,
 			}
 
 			ctx := context.Background()
-
-			// comment out because fails if running locally
-			/*
-				_, err = github.NewOIDCClient()
-				check(err)
-			*/
 
 			/*
 				audience := regexp.MustCompile(`^(https?://)?github\.com/?`).ReplaceAllString("https://github.com/slsa-framework/slsa-github-generator@v1", "")
@@ -168,20 +164,42 @@ run in the context of a Github Actions workflow.`,
 			check(err)
 
 			if attPath != "" {
-				s := signing.NewDefaultFulcio()
-				att, err := s.Sign(ctx, p)
-				check(err)
+				if local {
+					// use local version
+					s := signing.NewDefaultFulcio()
+					att, err := s.Sign(ctx, p)
+					check(err)
 
-				r := sigstore.NewDefaultRekor()
+					r := sigstore.NewDefaultRekor()
 
-				_, err = r.Upload(ctx, att)
-				check(err)
+					_, err = r.Upload(ctx, att)
+					check(err)
 
-				f, err := getFile(attPath)
-				check(err)
+					f, err := getFile(attPath)
+					check(err)
 
-				_, err = f.Write(att.Bytes())
-				check(err)
+					_, err = f.Write(att.Bytes())
+					check(err)
+				} else {
+
+					_, err = github.NewOIDCClient()
+					check(err)
+
+					s := sigstore.NewDefaultFulcio()
+					att, err := s.Sign(ctx, p)
+					check(err)
+
+					r := sigstore.NewDefaultRekor()
+
+					_, err = r.Upload(ctx, att)
+					check(err)
+
+					f, err := getFile(attPath)
+					check(err)
+
+					_, err = f.Write(att.Bytes())
+					check(err)
+				}
 
 			}
 		},
@@ -195,10 +213,11 @@ run in the context of a Github Actions workflow.`,
 	c.Flags().StringVarP(&sbomFile, "sbom", "b", "", "Path to create SBOM predicate")
 	c.Flags().StringVarP(&sbomSha256, "sbomSha256", "d", "", "Sha256 hash the SBOM")
 	c.Flags().StringVarP(&sbomUri, "sbomUri", "u", "", "SBOM Uri if file not provided")
-	c.Flags().StringVarP(&artifactRepo, "art-repo", "a", "", "Github repository from which the artifact was built")
-	c.Flags().StringVarP(&artifactRepoCommit, "art-repo-commit", "c", "", "Commit of repository from which the artifact was built")
-	c.Flags().StringVarP(&attestationGenRepo, "att-generation-repo", "x", "", "Github repository used to generate the attestation")
-	c.Flags().StringVarP(&attestationGenRepoCommit, "att-generation-repo-commit", "y", "", "Commit of Github repository used to generate the attestation")
+	c.Flags().StringVarP(&artifactRepo, "art-repo", "a", "No Assertion", "Github repository from which the artifact was built")
+	c.Flags().StringVarP(&artifactRepoCommit, "art-repo-commit", "c", "No Assertion", "Commit of repository from which the artifact was built")
+	c.Flags().StringVarP(&attestationGenRepo, "att-generation-repo", "x", "No Assertion", "Github repository used to generate the attestation")
+	c.Flags().StringVarP(&attestationGenRepoCommit, "att-generation-repo-commit", "y", "No Assertion", "Commit of Github repository used to generate the attestation")
+	c.Flags().BoolVarP(&local, "local", "l", false, "Whether attest will run in a GH action or locally")
 
 	return c
 }
@@ -213,6 +232,7 @@ type SbomProvenance struct {
 	ArtifactSourceRepoCommit string `json:"artifact-source-repo-commit"`
 	AttestationGenRepo       string `json:"attestation-generator-repo"`
 	AttestationGenRepoCommit string `json:"attestation-generator-repo-commit"`
+	// Consider adding SPDXID, SBOM name for cases where SBOM content cannot be accessed
 }
 
 // CustomSbomStatement creates an intoto SBOM statement with provided fields
